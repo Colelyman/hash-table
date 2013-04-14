@@ -12,11 +12,12 @@ using std::endl;
 
 using std::cout;
 
-unsigned hashCode(const std::string& s, int size) {
+unsigned hashCode(const std::string& s, int capacity) {
 	unsigned index = 0;
 	for(unsigned int i = 0; i < s.length(); i++)
 		index = index * 31 + s.at(i);
-	index %= size;
+	cout << "index: " << index << " capacity: " << capacity << endl;
+	index %= capacity;
 
 	return index;
 }
@@ -48,13 +49,14 @@ public:
 	ht() {
 		size = 0;
 		buckets = NULL;
-		capacity = 4;
+		capacity = 0;
 	}
 	~ht() {
-		delete[] buckets;
+		// deallocate using remove function
 	}
 	void resize() {
-		int ncap = capacity;
+		cout << "enter resize, capacity: " << capacity << " size: " << size << endl;
+		int ncap;
 		if(size == capacity) // grow
 			ncap = (capacity * 2) + 1;
 		else if(size < capacity / 2) // shrink
@@ -80,11 +82,16 @@ public:
 	void add(const ItemType& item) {
 		if(find(item))
 			return;
-		if(buckets == NULL)
-			buckets = new bucket[size+1];
+		if(buckets == NULL) {
+			capacity = 4;
+			buckets = new bucket[capacity];
+		}
 		else
 			resize();
-		buckets[hashCode(item, size)] = bucket(item);
+		bucket* btemp = &buckets[hashCode(item, capacity)];
+		while(btemp->next != NULL)
+			btemp = btemp->next;
+		btemp = new bucket(item);
 
 		size++;
 	}
@@ -95,9 +102,11 @@ public:
 		size--;
 	}
 	bool find(const ItemType& item) const {
+		if(size == 0)
+			return false;
 		unsigned hash = hashCode(item, size);
 		for(bucket* temp = buckets + hash; temp != NULL; temp = temp->next) {
-			if(*temp->item == item)
+			if(*(temp->item) == item)
 				return true;
 		}
 		return false;
@@ -116,10 +125,11 @@ public:
 					s << endl << "hash " << i << ": ";
 					count = 0;
 				}
-				s << tbucket->item << " ";
+				s << *tbucket->item << " ";
 				tbucket = tbucket->next;
 				count++;
 			}
+			s << endl;
 		}
 /*
 		while(!q.empty()) {
@@ -143,7 +153,6 @@ public:
 			if(n->right != NULL)
 				q.push(n->right);
 		}
-		s << endl;
 */
 
 		return s.str();
