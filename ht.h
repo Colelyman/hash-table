@@ -1,6 +1,6 @@
 #ifndef HT_H
 #define HT_H
-#include "queue.h"
+#include "list.h"
 #include <string>
 #include <sstream>
 
@@ -16,7 +16,13 @@ unsigned hashCode(const std::string& s, int capacity) {
 	unsigned index = 0;
 	for(unsigned int i = 0; i < s.length(); i++)
 		index = index * 31 + s.at(i);
-	cout << "index: " << index << " capacity: " << capacity << endl;
+	index %= capacity;
+
+	return index;
+}
+unsigned hashCode(const int& s, int capacity) {
+	unsigned index = 0;
+	index = index * 31 + s;
 	index %= capacity;
 
 	return index;
@@ -25,37 +31,19 @@ unsigned hashCode(const std::string& s, int capacity) {
 template<typename ItemType>
 class ht {
 private:
-	struct bucket {
-		ItemType* item;
-		bucket* next;
-
-		bucket(ItemType item) {
-			this->item = new ItemType(item);
-			next = NULL;
-		}
-		bucket() {
-			item = new ItemType();
-			next = NULL;
-		}
-		~bucket() {
-			delete item;
-		}
-	};
 	int size;
-	bucket* buckets; // the array of buckets
 	int capacity;
-	queue<bucket*> q;
+	List<ItemType>* table;
 public:
 	ht() {
 		size = 0;
-		buckets = NULL;
+		table = NULL;
 		capacity = 0;
 	}
 	~ht() {
 		// deallocate using remove function
 	}
 	void resize() {
-		cout << "enter resize, capacity: " << capacity << " size: " << size << endl;
 		int ncap;
 		if(size == capacity) // grow
 			ncap = (capacity * 2) + 1;
@@ -64,96 +52,63 @@ public:
 		else // return
 			return;
 
-		bucket* temp = buckets;
-		buckets = new bucket[ncap];
+		List<ItemType>* temp = table;
+		table = new List<ItemType>[ncap];
 		for(int i = 0; i < capacity; i++) {
-			bucket* btemp = temp + i;
-			ItemType* itemp = btemp->item;
-			buckets[hashCode(*itemp, ncap)].item = itemp;
-			while(btemp->next != NULL) {
-				itemp = btemp->item;
-				buckets[hashCode(*itemp, ncap)].item = itemp;
-				btemp = btemp->next;
-			}
-			delete[] temp;
+			ItemType item = temp[i].pop();
+			List<ItemType>* list = new List<ItemType>(item);
+			while(temp[i].getSize() > 0)
+				list->push(temp[i].pop());
+			table[hashCode(item, ncap)] = *list;
 		}
+		delete[] temp;
 		capacity = ncap;
 	}
 	void add(const ItemType& item) {
 		if(find(item))
 			return;
-		if(buckets == NULL) {
-			capacity = 4;
-			buckets = new bucket[capacity];
+		else if(table == NULL) {
+			capacity++;
+			table = new List<ItemType>[capacity];
 		}
-		else
+		else 
 			resize();
-		bucket* btemp = &buckets[hashCode(item, capacity)];
-		while(btemp->next != NULL)
-			btemp = btemp->next;
-		btemp = new bucket(item);
+
+		List<ItemType>* temp = table + hashCode(item, capacity);
+		if(temp == NULL)
+			temp = new List<ItemType>[capacity];
+		temp->push(item);
 
 		size++;
+		cout << "capacity: " << capacity << " size: " << size << endl;
 	}
 	void remove(const ItemType& item) {
-		if(find(item))
+		if(!find(item))
 			return;
-
+		List<ItemType>* temp = table + hashCode(item, capacity);
+		temp->remove(item);
 		size--;
+		resize();
 	}
 	bool find(const ItemType& item) const {
 		if(size == 0)
 			return false;
-		unsigned hash = hashCode(item, size);
-		for(bucket* temp = buckets + hash; temp != NULL; temp = temp->next) {
-			if(*(temp->item) == item)
-				return true;
-		}
-		return false;
+		unsigned hash = hashCode(item, capacity);
+		cout << "hash: " << hash << endl;
+		List<ItemType>* temp = table + hash;
+		if(temp->find(item))
+			return true;
+		else
+			return false;
 	}
 	string print() const {
 		if(size == 0)
 			return ItemType();
 		stringstream s;
 
-		int count = 0;
 		for(int i = 0; i < capacity; i++) {
-			s << "hash " << i << ": ";
-			bucket* tbucket = buckets + i;
-			while(tbucket != NULL) {
-				if(count == 8) {
-					s << endl << "hash " << i << ": ";
-					count = 0;
-				}
-				s << *tbucket->item << " ";
-				tbucket = tbucket->next;
-				count++;
-			}
-			s << endl;
+			s << "hash " << i << ": " << table[i].print() << endl;
 		}
-/*
-		while(!q.empty()) {
-			Node* n = q.pop();
-			if(n == sentinal && !q.empty()) {
-				q.push(sentinal);
-				s << endl << "hash " << hash << ": ";
-				hash++;
-				count = 0;
-			}
-			if(count == 8 && n != sentinal) {
-				s << endl << "hash " << hash - 1 << ": ";
-				count = 0;
-			}
-			if(n != sentinal) {
-				s << n->item << "(" << height(n) << ") "; 
-				count++;
-			}
-			if(n->left != NULL)
-				q.push(n->left);
-			if(n->right != NULL)
-				q.push(n->right);
-		}
-*/
 
 		return s.str();
 	}
