@@ -54,23 +54,19 @@ public:
 
 		List<ItemType>** old = table;
 		table = new List<ItemType>*[ncap]();
+
 		for(int i = 0; i < capacity; i++) {
 			if(old[i] == NULL)
 				continue;
-			cout << "i: " << i << endl;
-			ItemType item = old[i]->pop();
-			while(old[i]->empty()) {
-				item = old[i]->pop();
-				unsigned hash = hashCode(item, ncap);
+			List<ItemType>* list = old[i];
+			while(list->empty()) {
+				ItemType item = list->pop();
+				unsigned hash = hashCode(item, capacity);
 				if(table[hash] == NULL)
-					table[hash] = new List<ItemType>(item);
-				else
-					table[hash]->push(item);
+					table[hash] = new List<ItemType>;
+				table[hash]->push(item);
 			}
-		}
-		for(int i = 0; i < capacity; i++) {
-			if(old[i] != NULL)
-				delete old[i];
+			delete old[i];
 		}
 		delete[] old;
 		capacity = ncap;
@@ -88,14 +84,12 @@ public:
 
 		List<ItemType>* temp = table[hash];
 		if(temp == NULL) {
-			cout << "temp == NULL" << endl;
 			temp = new List<ItemType>;
 		}
 		temp->push(item);
 		table[hash] = temp;
 
 		size++;
-		cout << "capacity: " << capacity << " size: " << size << endl;
 	}
 	void remove(const ItemType& item) {
 		if(!find(item))
@@ -109,8 +103,9 @@ public:
 		if(size == 0)
 			return false;
 		unsigned hash = hashCode(item, capacity);
-		cout << "hash: " << hash << endl;
-		List<ItemType>* temp = table[hashCode(item, capacity)];
+		List<ItemType>* temp = table[hash];
+		if(temp == NULL)
+			return false;
 		if(temp->find(item))
 			return true;
 		else
